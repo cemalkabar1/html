@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <!-- iOS Optimizasyonları -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Araç-Jant Montaj</title>
+    <link rel="manifest" href="/manifest.json">
+    <link rel="apple-touch-icon" href="/icons/icon-192x192.png">
+    <style>
+        :root {
+            --safe-area-top: env(safe-area-inset-top);
+            --safe-area-bottom: env(safe-area-inset-bottom);
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f2f2f7;
+            touch-action: manipulation;
+            padding-top: var(--safe-area-top);
+            padding-bottom: var(--safe-area-bottom);
+            -webkit-tap-highlight-color: transparent;
+        }
+        #editor {
+            max-width: 100%;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        #canvas-container {
+            flex-grow: 1;
+            position: relative;
+            overflow: hidden;
+        }
+        #canvas {
+            touch-action: none;
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .controls {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #e5e5ea;
+        }
+        .file-input-wrapper {
+            position: relative;
+            margin: 10px 0;
+        }
+        .file-input-wrapper input {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+        .ios-button {
+            display: block;
+            width: 100%;
+            padding: 12px;
+            background: #007AFF;
+            color: white;
+            border-radius: 10px;
+            text-align: center;
+            font-size: 17px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+        }
+        #status {
+            color: #34C759;
+            font-size: 13px;
+            text-align: center;
+            margin: 8px 0;
+            height: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div id="editor">
+        <div id="canvas-container">
+            <canvas id="canvas"></canvas>
+        </div>
+        <div class="controls">
+            <div class="file-input-wrapper">
+                <button class="ios-button">Araç Yükle</button>
+                <input type="file" id="upload-vehicle" accept="image/*" capture="environment">
+            </div>
+            <div class="file-input-wrapper">
+                <button class="ios-button">Jant Yükle</button>
+                <input type="file" id="upload-wheel" accept="image/*">
+            </div>
+            <div id="status"></div>
+            <button id="remove-bg" class="ios-button" style="background:#FF3B30;">Arka Planı Temizle</button>
+        </div>
+    </div>
+
+    <!-- Fabric.js (v5.3.1) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    
+    <script>
+        // PWA Service Worker Kaydı
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js')
+                .then(reg => console.log('Service Worker registered'))
+                .catch(err => console.error('SW registration failed:', err));
+        }
+
+        // iOS Safe Area Desteği
+        document.documentElement.style.setProperty('--safe-area-top', `${window.safeAreaInsets?.top || 0}px`);
+        document.documentElement.style.setProperty('--safe-area-bottom', `${window.safeAreaInsets?.bottom || 0}px`);
+
+        // Canvas Boyut Ayarlama
+        function resizeCanvas() {
+            const container = document.getElementById('canvas-container');
+            const canvas = document.getElementById('canvas');
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight - 200; // Kontrol paneli için alan bırak
+        }
+
+        // Uygulama Başlatma
+        document.addEventListener('DOMContentLoaded', () => {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            const canvas = new fabric.Canvas('canvas', {
+                selection: false,
+                enableRetinaScaling: true,
+                fireRightClick: true,
+                stopContextMenu: true
+            });
+
+            // iOS için touch optimizasyonları
+            canvas.on('touch:gesture', function(opt) {
+                if (opt.self.x > canvas.width/2) {
+                    // Jant döndürme/döndürme
+                    if (opt.self.type === 'rotate') {
+                        const obj = canvas.getActiveObject();
+                        if (obj) obj.set('angle', opt.self.rotation).setCoords();
+                    }
+                    if (opt.self.type === 'scale') {
+                        const obj = canvas.getActiveObject();
+                        if (obj) obj.scale(opt.self.scale).setCoords();
+                    }
+                    canvas.renderAll();
+                }
+            });
+
+            // Diğer fonksiyonlar (dosya yükleme, remove.bg entegrasyonu)
+            // ... (Önceki koddaki fonksiyonlar buraya gelecek)
+            // API key: AG4M9QM3YEek2RZQF5mrY8Yr
+        });
+    </script>
+</body>
+</html>
