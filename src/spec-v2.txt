@@ -1,0 +1,33 @@
+tesla-matrix|Tesla & Matrix|TESLA=02..08,10..16,18;MATRİX=01,02,02,06
+pinar-calve-uraz|Pınar (Calve) & Uraz|PINAR (CALVE)=01..04,06..10,13..21,23..26,28,30,31;URAZ=01..05
+loya-niloya|Loya & Niloya|NİLOYA=01..05;LOYA=300..308,310..313
+bohem-damla|Bohem & Damla|BOHEM=03,07..13,16,18..21,23..27;DAMLA=02,05,07,11,12,14
+kemik-vizon-yesil-bordo|Kemik, Vizon, Yeşil & Bordo|KEMİK=691,692;DÜZ KEMİK=691;VİZON=691,692;DÜZ VİZON=691;YEŞİL=691,692;DÜZ YEŞİL=691;BORDO=691,692;DÜZ BORDO=691
+tonya-nehir|Tonya & Nehir|TONYA=01,02,06,09..19;NEHİR=01..10
+ibiza-milyo|İbiza & Milyo|İBİZA=01..03,06..09,12,15..24;MİLYO=01..04
+yoda-mozaik|Yoda & Mozaik|YODA=01..03,05..12,15,17,20,22,23,25..27,29;MOZAİK=101..107
+paris|Paris|PARİS=01..04,06..08,11..15,17..19
+inci-kadife|İnci Kadife|İNCİ KADİFE=01..03,07,08,10,11,20..27,118,1808
+alaska-rio|Alaska & Rio|ALASKA=01..07,09..11,13,15,18;RİO=01,03..06
+luna|Luna|LUNA=01..20,22,24
+sona-zumrud|Sona & Zümrüd|SONA=01..05;ZÜMRÜD=01,02,04,06..08,10,12,15..20,22,26
+diana-asiyan-ramel|Diana, Aşıyan & Ramel|DİANA=01..05;AŞIYAN=01..05;RAMEL=01..05
+babyface|Babyface|BABYFACE=01..09,12,15,17,20,22..30
+coco|Coco|COCO=01..08,10..18
+odin-ramses|Odin & Ramses|ODİN=01..05,07,09..12,16..22,24..26,28,31;RAMSES=01,06,08,09,11..15
+hermes-bien|Hermes & Bien|HERMES=01..11,13,15..18,20..24;BİEN=01..06
+puffy-hasir|Puffy & Hasır|PUFFY=01-04,01-20,02-19,03-02,03-03,03-16,04-13,05-08,06-06,06-17,07-07,08-10,09-18,10-14;PUFFY KOMBİN=01..05;PUFFY OPTİK=01..03;HASIR=01-04,02-19,03-02,03-03,03-16,04-13,04-20,05-08,06-06,06-17,07-07,08-10,09-18,10-14;HASIR KOMBİN=01..05;HASIR OPTİK=01..03
+titan-kronos|Titan & Kronos|TİTAN=01..03,06,07,09..24;KRONOS=01..06
+plain-zebra-dama-solando|Plain, Zebra, Dama & Solando|PLAIN=01..17;DAMA=01..06;ZEBRA=01..06;SOLANDO=01..05
+zeugma|Zeugma|ZEUGMA V-=101..177,179..185
+milano-torino|Milano & Torino|MİLANO=9500,9700..9703,9750..9753,9900,9901,9950,9951,9953,9954,102250;TORİNO=500..503
+zuma|Zuma|ZUMA=01..23
+paradox-paradox-dijital|Paradox & Paradox Dijital|PARADOX=02..05,08,11,13..15,15,17,21..27,29,31;PARADOX DİJİTAL=01,02,04..06
+sunte-zikzak-yaprak|Sunte, Zikzak & Yaprak|SUNTE=01..16,18,19;YAPRAK=201..205;ZİKZAK=101..106
+velina-stone|Velina & Stone|VELİNA=01..03,05..09,12,15,17,20,23..29,OPTİK;STONE=01..04
+bukle|Bukle|BUKLE=26/2,29..32,34,35,37,39,41,45..48,95,97,130,162
+tiffany|Tiffany|TİFFANY=01..14
+vegas-misa|Vegas & Misa|MİSA=02..07;VEGAS=07..09,11..15,17..20,22..24,89,400
+aristo-kiev-artemis|Aristo, Kiev & Artemis|ARİSTO=01..03,05..07,09..18,20..24,26..30,32,33;KİEV=01,03..11;ARTEMİS=01..05
+loki-akide|Loki & Akide|AKİDE=01..03,06..25;LOKİ=01..03,06..25
+sultan-sarayli-kraliyet|Sultan, Saraylı & Kraliyet|SARAYLI=01..11;SULTAN=01..11;KRALİYET=01..11

@@ -1,0 +1,251 @@
+// Fatihhan Tekstil site üreticisi. build(spec, media) -> [{path, content}]
+// spec: satır başına "slug|Ad|SERİ=kodlar;SERİ=kodlar". media: dosya adı -> {url, w, h}
+function build(spec, media) {
+  var BASE = 'https://www.fatihhantekstil.com';
+  var TEL = '0534 565 89 99';
+  var WA = 'https://wa.me/905345658999?text=';
+  var esc = function (s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;'); };
+  var slug = function (s) {
+    var m = { 'İ': 'i', 'I': 'i', 'Ş': 's', 'Ğ': 'g', 'Ü': 'u', 'Ö': 'o', 'Ç': 'c', 'ı': 'i', 'ş': 's', 'ğ': 'g', 'ü': 'u', 'ö': 'o', 'ç': 'c' };
+    return s.replace(/[İIŞĞÜÖÇışğüöç]/g, function (c) { return m[c]; }).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  };
+  var wa = function (t) { return WA + encodeURIComponent(t); };
+  var pic = function (name, w, h) {
+    var f = media[name];
+    if (!f) return '';
+    if (f.url.indexOf('static.wixstatic.com') < 0) return f.url;
+    var r = Math.min(1, w / f.w);
+    var ww = Math.round(f.w * r), hh = Math.round(f.h * r);
+    return f.url + '/v1/fill/w_' + ww + ',h_' + hh + ',al_c,q_85,enc_auto/' + name;
+  };
+
+  // ---- veriyi aç ----
+  var seen = {};
+  var cols = spec.trim().split('\n').map(function (line) {
+    var p = line.split('|');
+    var col = { slug: p[0], name: p[1], series: [], n: 0, cover: p[0] + '-kumas-koleksiyonu.webp' };
+    p[2].split(';').forEach(function (part) {
+      var i = part.indexOf('=');
+      var sname = part.slice(0, i);
+      var join = /-$/.test(sname) ? '' : ' ';
+      var items = [];
+      part.slice(i + 1).split(',').forEach(function (tok) {
+        var r = tok.match(/^(\d+)\.\.(\d+)$/);
+        var list = [tok];
+        if (r) {
+          list = [];
+          for (var n = parseInt(r[1], 10); n <= parseInt(r[2], 10); n++) {
+            var t = String(n);
+            while (t.length < r[1].length) t = '0' + t;
+            list.push(t);
+          }
+        }
+        list.forEach(function (t) {
+          var code = sname + join + t;
+          var s = slug(code);
+          seen[s] = (seen[s] || 0) + 1;
+          var id = seen[s] > 1 ? s + '-' + seen[s] : s;
+          items.push({ code: code, id: id, file: id + '-dosemelik-kumas.webp', url: 'kumas-' + id + '.html' });
+        });
+      });
+      col.series.push({ name: sname.replace(/ V-$/, ''), items: items });
+      col.n += items.length;
+    });
+    col.url = 'kartela-' + col.slug + '.html';
+    return col;
+  });
+  var total = cols.reduce(function (a, c) { return a + c.n; }, 0);
+  var bySlug = {};
+  cols.forEach(function (c) { bySlug[c.slug] = c; });
+
+  // ---- ortak parçalar ----
+  var head = function (o) {
+    var img = o.image ? '<meta property="og:image" content="' + esc(o.image) + '">\n' : '';
+    return '<!doctype html>\n<html lang="tr">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width, initial-scale=1">\n' +
+      '<title>' + esc(o.title) + '</title>\n<meta name="description" content="' + esc(o.desc) + '">\n' +
+      '<link rel="canonical" href="' + BASE + '/' + o.path + '">\n<meta name="robots" content="index,follow,max-image-preview:large">\n<link rel="icon" href="/favicon.svg" type="image/svg+xml">\n' +
+      '<meta property="og:type" content="website">\n<meta property="og:site_name" content="Fatihhan Tekstil">\n<meta property="og:locale" content="tr_TR">\n' +
+      '<meta property="og:title" content="' + esc(o.title) + '">\n<meta property="og:description" content="' + esc(o.desc) + '">\n' +
+      '<meta property="og:url" content="' + BASE + '/' + o.path + '">\n' + img +
+      '<link rel="preconnect" href="https://fonts.googleapis.com">\n<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>\n' +
+      '<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:opsz,wght@6..96,500&family=Urbanist:wght@300;400;500&display=swap" rel="stylesheet">\n' +
+      '<link rel="stylesheet" href="/site.css">\n' +
+      (o.ld || []).map(function (j) { return '<script type="application/ld+json">' + JSON.stringify(j) + '</script>\n'; }).join('') +
+      '</head>\n<body' + (o.home ? ' class="ana"' : '') + '>\n' +
+      '<p class="duyuru">Türkiye\'nin her yerine gönderim yapıyoruz. Toptan ve perakende satış.</p>\n' +
+      '<header class="ust" id="ust">\n  <nav class="menu" aria-label="Ana menü">\n    <a href="/kartela.html">Kartelalar</a>\n    <a href="/index.html#hakkimizda">Hakkımızda</a>\n    <a href="/index.html#iletisim">İletişim</a>\n  </nav>\n' +
+      '  <a class="marka" href="/index.html" aria-label="Fatihhan Tekstil ana sayfa">FATİHHAN<span>Tekstil</span></a>\n' +
+      '  <div class="araclar">\n    <a class="tel" href="tel:+905345658999">' + TEL + '</a>\n    <a class="wa" href="' + wa('Merhaba, kumaşlarınız hakkında bilgi almak istiyorum.') + '">WhatsApp</a>\n  </div>\n</header>\n';
+  };
+  var foot = '<footer class="alt">\n  <span>Fatihhan Tekstil</span>\n  <span><a href="/kartela.html">Kumaş kartelaları</a></span>\n  <span><a href="tel:+905345658999">' + TEL + '</a></span>\n  <span><a href="https://www.instagram.com/fatihhantekstil/">Instagram: @fatihhantekstil</a></span>\n</footer>\n' +
+    '<script>(function(){var u=document.getElementById("ust");function a(){u.classList.toggle("dolu",window.scrollY>30)}a();window.addEventListener("scroll",a,{passive:true})})();</script>\n</body>\n</html>\n';
+  var cover = function (c, w, cls, eager) {
+    var f = media[c.cover] || { w: 4, h: 3 };
+    return '<img' + (cls ? ' class="' + cls + '"' : '') + ' src="' + pic(c.cover, w, 0) + '" alt="' + esc(c.name) + ' döşemelik kumaş koleksiyonu" width="' + f.w + '" height="' + f.h + '"' + (eager ? ' fetchpriority="high"' : ' loading="lazy"') + '>';
+  };
+  var card = function (c) {
+    return '<a class="kart" href="/' + c.url + '" data-ara="' + esc((c.name + ' ' + c.series.map(function (s) { return s.name; }).join(' ')).toLowerCase()) + '">' +
+      cover(c, 640) + '<span class="kart-ad">' + esc(c.name) + '</span><span class="kart-say">' + c.n + ' renk ve desen</span></a>';
+  };
+  var panel = function (c, tag, note) {
+    return '<article class="kutu"><div class="gorsel">' + cover(c, 1600) + '</div><div class="yazi">' + (note ? '<p class="ust-not">' + note + '</p>' : '') +
+      '<' + tag + '>' + esc(c.name) + '</' + tag + '><p class="baglar"><a href="/' + c.url + '">Kartelayı gör</a><a href="' + wa('Merhaba, ' + c.name + ' kumaş için fiyat almak istiyorum.') + '">Fiyat al</a></p></div></article>';
+  };
+  var org = { '@context': 'https://schema.org', '@type': 'Organization', name: 'Fatihhan Tekstil', url: BASE + '/', telephone: '+905345658999', sameAs: ['https://www.instagram.com/fatihhantekstil/'], areaServed: { '@type': 'Country', name: 'Türkiye' }, knowsAbout: ['döşemelik kumaş', 'koltuk kumaşı', 'mobilya döşeme kumaşı', 'kumaş kartelası'], contactPoint: { '@type': 'ContactPoint', telephone: '+905345658999', contactType: 'sales', availableLanguage: 'Turkish', areaServed: 'TR' }, description: 'Döşemelik kumaş tedarikçisi. Toptan ve perakende satış, Türkiye geneline gönderim.' };
+
+  var faq = [
+    ['Fatihhan Tekstil ne satıyor?', 'Fatihhan Tekstil döşemelik kumaş tedarik eder. Koltuk, sandalye ve mobilya döşemesinde kullanılan ' + total + ' renk ve desen, ' + cols.length + ' kartela halinde bu sitede kodlarıyla listelenir.'],
+    ['Bir kumaşın fiyatını nasıl öğrenirim?', 'Sitede fiyat yazmıyor. Kumaşın kodunu ' + TEL + ' numaralı hatta WhatsApp\'tan yazın ya da arayın, güncel fiyatı ve stok durumunu söyleyelim. Her kumaşın sayfasındaki "Fiyat sor" bağlantısı kodu hazır mesaj olarak açar.'],
+    ['Kumaş kodunu nerede bulurum?', 'Her kumaşın görselinde ve altında kodu yazar, örneğin TESLA 04 ya da ZEUGMA V-101. Kartelalar sayfasındaki arama kutusuna kumaşın adını ya da kodunu yazarak da bulabilirsiniz.'],
+    ['Toptan mı satıyorsunuz, perakende mi?', 'İkisi de var, toptan ve perakende satış yapıyoruz.'],
+    ['Türkiye\'nin her yerine gönderim yapıyor musunuz?', 'Evet, siparişleri Türkiye\'nin her yerine gönderiyoruz.']
+  ];
+  var out = [];
+
+  // ---- ana sayfa ----
+  var hero = bySlug['tesla-matrix'];
+  var luna = bySlug['luna'];
+  var lunaItem = luna.series[0].items[9];
+  var lf = media[lunaItem.file] || { w: 5, h: 4 };
+  out.push({
+    path: 'index.html', content: head({
+      home: true, path: '', title: 'Fatihhan Tekstil | Döşemelik kumaş kartelaları, toptan ve perakende',
+      desc: 'Fatihhan Tekstil döşemelik kumaş tedarik eder. ' + cols.length + ' koleksiyonda ' + total + ' renk ve desen, hepsi kodlarıyla sitede. Toptan ve perakende satış, Türkiye geneline gönderim.',
+      image: pic(hero.cover, 1200, 0), ld: [org, { '@context': 'https://schema.org', '@type': 'WebSite', name: 'Fatihhan Tekstil', url: BASE + '/', inLanguage: 'tr' }, { '@context': 'https://schema.org', '@type': 'FAQPage', mainEntity: faq.map(function (q) { return { '@type': 'Question', name: q[0], acceptedAnswer: { '@type': 'Answer', text: q[1] } }; }) }]
+    }) +
+      '<main>\n<section class="tam acilis"><div class="gorsel">' + cover(hero, 1600, '', true) + '</div><div class="yazi"><p class="ust-not">Dokuya değer katan tasarımlar</p>' +
+      '<h1>Döşemelik kumaşta ' + cols.length + ' koleksiyon, ' + total + ' renk ve desen</h1><p class="baglar"><a href="/kartela.html">Kartelaları gör</a><a href="' + wa('Merhaba, kumaşlarınız için fiyat almak istiyorum.') + '">WhatsApp\'tan fiyat al</a></p></div></section>\n' +
+      '<section class="ikili">' + panel(bySlug['inci-kadife'], 'h2') + panel(bySlug['zeugma'], 'h2') + '</section>\n' +
+      '<section class="tek">' + panel(bySlug['coco'], 'h2') + '</section>\n' +
+      '<section class="yarim"><div class="kutu"><div class="gorsel">' + cover(luna, 1600) + '</div></div><div class="beyaz"><a class="ornek" href="/' + lunaItem.url + '"><img src="' + pic(lunaItem.file, 640, 0) + '" alt="' + lunaItem.code + ' döşemelik kumaş" width="' + lf.w + '" height="' + lf.h + '" loading="lazy"></a>' +
+      '<h2>Luna</h2><p class="baglar"><a href="/' + luna.url + '">Kartelayı gör</a></p></div></section>\n' +
+      '<section class="ikili">' + panel(bySlug['bohem-damla'], 'h2') + panel(bySlug['loki-akide'], 'h2') + '</section>\n' +
+      '<section class="liste" id="kartelalar"><h2>Kumaş kartelaları</h2><p class="giris">Her kartelada kumaşlar kodlarıyla duruyor. Beğendiğiniz kodu WhatsApp\'tan yazın, fiyatını ve stok durumunu söyleyelim.</p><div class="kartlar">' + cols.map(card).join('') + '</div></section>\n' +
+      '<section class="metin" id="hakkimizda"><h2>Hakkımızda</h2><p>Fatihhan Tekstil döşemelik kumaş tedarik eder. Koltuk, sandalye ve mobilya döşemesinde kullanılan kumaşları toptan ve perakende satıyoruz. Siparişleri Türkiye\'nin her yerine gönderiyoruz.</p>' +
+      '<p>Kumaşı görmeden karar vermek zor. WhatsApp\'tan yazın, ilgilendiğiniz koleksiyonun renk kartelasını ve güncel fiyatını gönderelim.</p></section>\n' +
+      '<section class="metin sss" id="sss"><h2>Sık sorulanlar</h2>' + faq.map(function (q) { return '<h3>' + esc(q[0]) + '</h3><p>' + esc(q[1]) + '</p>'; }).join('') + '</section>\n' +
+      '<section class="iletisim" id="iletisim"><h2>İletişim</h2><a class="buyuk" href="tel:+905345658999">' + TEL + '</a><p class="baglar"><a href="' + wa('Merhaba, kumaşlarınız hakkında bilgi almak istiyorum.') + '">WhatsApp\'tan yaz</a><a href="https://www.instagram.com/fatihhantekstil/">Instagram: @fatihhantekstil</a></p></section>\n</main>\n' + foot
+  });
+
+  // ---- kartela dizini ----
+  out.push({
+    path: 'kartela.html', content: head({
+      path: 'kartela.html', title: 'Döşemelik kumaş kartelaları ve kumaş kodları | Fatihhan Tekstil',
+      desc: cols.length + ' döşemelik kumaş kartelası, ' + total + ' kumaş kodu: ' + cols.slice(0, 9).map(function (c) { return c.name; }).join(', ') + ' ve diğerleri. Kodla arayın, WhatsApp\'tan fiyat alın.',
+      image: pic(hero.cover, 1200, 0),
+      ld: [{ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Ana sayfa', item: BASE + '/' }, { '@type': 'ListItem', position: 2, name: 'Kartelalar', item: BASE + '/kartela.html' }] },
+      { '@context': 'https://schema.org', '@type': 'ItemList', name: 'Döşemelik kumaş kartelaları', itemListElement: cols.map(function (c, i) { return { '@type': 'ListItem', position: i + 1, name: c.name, url: BASE + '/' + c.url }; }) }]
+    }) +
+      '<main class="ic">\n<nav class="iz" aria-label="Sayfa yolu"><a href="/index.html">Ana sayfa</a><span>Kartelalar</span></nav>\n<h1>Döşemelik kumaş kartelaları</h1>\n' +
+      '<p class="giris">' + cols.length + ' kartelada ' + total + ' renk ve desen var. Kumaşın adını ya da kodunu yazarak arayabilirsiniz.</p>\n' +
+      '<label class="ara"><span>Kumaş adı ya da kodu</span><input id="ara" type="search" placeholder="Örnek: TESLA 04" autocomplete="off"></label>\n<p class="yok" id="yok" hidden>Bu ada ya da koda uyan kumaş bulunamadı. WhatsApp\'tan sorabilirsiniz.</p>\n' +
+      '<div class="kartlar" id="kartlar">' + cols.map(card).join('') + '</div>\n' +
+      '<section class="kodlar"><h2>Bütün kumaş kodları</h2>' + cols.map(function (c) {
+        return '<div class="kod-grup"><h3><a href="/' + c.url + '">' + esc(c.name) + '</a></h3><ul>' + c.series.map(function (s) { return s.items.map(function (it) { return '<li><a href="/' + it.url + '">' + esc(it.code) + '</a></li>'; }).join(''); }).join('') + '</ul></div>';
+      }).join('') + '</section>\n</main>\n' +
+      '<script>(function(){var i=document.getElementById("ara"),y=document.getElementById("yok");function n(s){return s.toLocaleLowerCase("tr").replace(/\\s+/g," ").trim()}i.addEventListener("input",function(){var q=n(i.value),v=0;document.querySelectorAll("#kartlar .kart").forEach(function(k){var g=!q||k.getAttribute("data-ara").indexOf(q)>-1;k.hidden=!g;if(g)v++});document.querySelectorAll(".kod-grup").forEach(function(g){var a=0;g.querySelectorAll("li").forEach(function(l){var s=!q||n(l.textContent).indexOf(q)>-1||n(g.querySelector("h3").textContent).indexOf(q)>-1;l.hidden=!s;if(s)a++});g.hidden=!a;if(a)v++});y.hidden=v>0})})();</script>\n' + foot
+  });
+
+  // ---- koleksiyon sayfaları ----
+  cols.forEach(function (c, ci) {
+    var all = [];
+    c.series.forEach(function (s) { s.items.forEach(function (it) { all.push(it); }); });
+    var names = c.series.map(function (s) { return s.name; });
+    var desc = c.name + ' döşemelik kumaş kartelası, ' + c.n + ' renk ve desen. Kodlar: ' + all.slice(0, 6).map(function (i) { return i.code; }).join(', ') + ' ve diğerleri. Toptan ve perakende, Türkiye geneline gönderim.';
+    var prev = cols[(ci + cols.length - 1) % cols.length], next = cols[(ci + 1) % cols.length];
+    var ld = [{ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Ana sayfa', item: BASE + '/' }, { '@type': 'ListItem', position: 2, name: 'Kartelalar', item: BASE + '/kartela.html' }, { '@type': 'ListItem', position: 3, name: c.name, item: BASE + '/' + c.url }] },
+    { '@context': 'https://schema.org', '@type': 'ItemList', name: c.name + ' döşemelik kumaş kartelası', numberOfItems: c.n, itemListElement: all.map(function (it, i) { return { '@type': 'ListItem', position: i + 1, name: it.code + ' döşemelik kumaş', url: BASE + '/' + it.url, image: pic(it.file, 640, 0) }; }) }];
+    out.push({
+      path: c.url, content: head({ path: c.url, title: c.name + ' döşemelik kumaş kartelası ve kodları | Fatihhan Tekstil', desc: desc, image: pic(c.cover, 1200, 0), ld: ld }) +
+        '<main class="ic">\n<nav class="iz" aria-label="Sayfa yolu"><a href="/index.html">Ana sayfa</a><a href="/kartela.html">Kartelalar</a><span>' + esc(c.name) + '</span></nav>\n' +
+        '<h1>' + esc(c.name) + ' döşemelik kumaş kartelası</h1>\n' +
+        '<p class="giris">Bu kartelada ' + c.n + ' renk ve desen var' + (names.length > 1 ? ': ' + c.series.map(function (s) { return s.name + ' (' + s.items.length + ')'; }).join(', ') : '') + '. Beğendiğiniz kumaşın altındaki bağlantıdan WhatsApp\'a geçip fiyat sorabilirsiniz.</p>\n' +
+        '<div class="kapak">' + cover(c, 1600, '', true) + '</div>\n' +
+        c.series.map(function (s) {
+          return '<section class="seri"><h2>' + esc(s.name) + '<small>' + s.items.length + ' renk ve desen</small></h2><div class="kumaslar">' + s.items.map(function (it) {
+            var f = media[it.file] || { w: 5, h: 4 };
+            return '<figure id="' + it.id + '"><a href="/' + it.url + '"><img src="' + pic(it.file, 640, 0) + '" alt="' + esc(it.code) + ' döşemelik kumaş, ' + esc(c.name) + ' kartelası" width="' + f.w + '" height="' + f.h + '" loading="lazy"></a><figcaption><strong><a href="/' + it.url + '">' + esc(it.code) + '</a></strong><a href="' + wa('Merhaba, ' + it.code + ' kodlu kumaş için fiyat almak istiyorum.') + '">Fiyat sor</a></figcaption></figure>';
+          }).join('') + '</div></section>';
+        }).join('\n') +
+        '\n<nav class="gecis" aria-label="Diğer kartelalar"><a href="/' + prev.url + '">' + esc(prev.name) + '</a><a href="/kartela.html">Bütün kartelalar</a><a href="/' + next.url + '">' + esc(next.name) + '</a></nav>\n</main>\n' + foot
+    });
+  });
+
+  // ---- tek kumaş sayfaları ----
+  cols.forEach(function (c) {
+    var all = [];
+    c.series.forEach(function (s) { s.items.forEach(function (it) { all.push({ it: it, s: s }); }); });
+    all.forEach(function (x, i) {
+      var it = x.it, s = x.s;
+      var f = media[it.file] || { w: 5, h: 4 };
+      var prev = all[(i + all.length - 1) % all.length].it, next = all[(i + 1) % all.length].it;
+      var title = it.code + ' döşemelik kumaş | ' + c.name + ' kartelası | Fatihhan Tekstil';
+      var desc = it.code + ' kodlu döşemelik kumaş. ' + c.name + ' kartelası, ' + s.name + ' serisi (' + s.items.length + ' renk ve desen). Fiyat ve stok için WhatsApp: ' + TEL + '. Toptan ve perakende, Türkiye geneline gönderim.';
+      var ld = [{ '@context': 'https://schema.org', '@type': 'BreadcrumbList', itemListElement: [{ '@type': 'ListItem', position: 1, name: 'Ana sayfa', item: BASE + '/' }, { '@type': 'ListItem', position: 2, name: 'Kartelalar', item: BASE + '/kartela.html' }, { '@type': 'ListItem', position: 3, name: c.name, item: BASE + '/' + c.url }, { '@type': 'ListItem', position: 4, name: it.code, item: BASE + '/' + it.url }] },
+      { '@context': 'https://schema.org', '@type': 'WebPage', name: it.code + ' döşemelik kumaş', url: BASE + '/' + it.url, inLanguage: 'tr', isPartOf: { '@type': 'CollectionPage', name: c.name + ' döşemelik kumaş kartelası', url: BASE + '/' + c.url }, primaryImageOfPage: { '@type': 'ImageObject', contentUrl: pic(it.file, 640, 0), name: it.code + ' döşemelik kumaş', caption: it.code + ' döşemelik kumaş, ' + c.name + ' kartelası, Fatihhan Tekstil', width: f.w, height: f.h }, publisher: { '@type': 'Organization', name: 'Fatihhan Tekstil', url: BASE + '/' } }];
+      var others = s.items.filter(function (o) { return o.id !== it.id; });
+      out.push({
+        path: it.url, content: head({ path: it.url, title: title, desc: desc, image: pic(it.file, 640, 0), ld: ld }) +
+          '<main class="ic">\n<nav class="iz" aria-label="Sayfa yolu"><a href="/index.html">Ana sayfa</a><a href="/kartela.html">Kartelalar</a><a href="/' + c.url + '">' + esc(c.name) + '</a><span>' + esc(it.code) + '</span></nav>\n' +
+          '<article class="kumas"><div class="kumas-gorsel"><img src="' + pic(it.file, 640, 0) + '" alt="' + esc(it.code) + ' döşemelik kumaş, ' + esc(c.name) + ' kartelası" width="' + f.w + '" height="' + f.h + '" fetchpriority="high"></div>' +
+          '<div class="kumas-bilgi"><h1>' + esc(it.code) + ' döşemelik kumaş</h1>' +
+          '<p>' + esc(it.code) + ', ' + esc(c.name) + ' kartelasının ' + esc(s.name) + ' serisinden bir döşemelik kumaş. Seride ' + s.items.length + ' renk ve desen var.</p>' +
+          '<dl><dt>Kumaş kodu</dt><dd>' + esc(it.code) + '</dd><dt>Seri</dt><dd>' + esc(s.name) + '</dd><dt>Kartela</dt><dd><a href="/' + c.url + '">' + esc(c.name) + '</a></dd><dt>Kullanım</dt><dd>Döşemelik</dd><dt>Satış</dt><dd>Toptan ve perakende</dd><dt>Gönderim</dt><dd>Türkiye geneli</dd></dl>' +
+          '<p>Fiyat ve stok için kodu WhatsApp\'tan yazın ya da arayın.</p>' +
+          '<p class="baglar"><a href="' + wa('Merhaba, ' + it.code + ' kodlu kumaş için fiyat almak istiyorum.') + '">WhatsApp\'tan fiyat sor</a><a href="tel:+905345658999">' + TEL + '</a></p></div></article>\n' +
+          (others.length ? '<section class="seri"><h2>' + esc(s.name) + ' serisinin diğer renkleri<small>' + others.length + ' kumaş</small></h2><div class="kumaslar kucuk">' + others.map(function (o) {
+            var g = media[o.file] || { w: 5, h: 4 };
+            return '<figure><a href="/' + o.url + '"><img src="' + pic(o.file, 320, 0) + '" alt="' + esc(o.code) + ' döşemelik kumaş" width="' + g.w + '" height="' + g.h + '" loading="lazy"></a><figcaption><strong><a href="/' + o.url + '">' + esc(o.code) + '</a></strong></figcaption></figure>';
+          }).join('') + '</div></section>\n' : '') +
+          '<nav class="gecis" aria-label="Kartelada gezin"><a href="/' + prev.url + '">' + esc(prev.code) + '</a><a href="/' + c.url + '">' + esc(c.name) + ' kartelası</a><a href="/' + next.url + '">' + esc(next.code) + '</a></nav>\n</main>\n' + foot
+      });
+    });
+  });
+
+  // ---- yapay zeka arama motorları için özet ----
+  out.push({
+    path: 'llms.txt', content: '# Fatihhan Tekstil\n\n> Fatihhan Tekstil döşemelik kumaş tedarikçisidir. Koltuk, sandalye ve mobilya döşemesinde kullanılan kumaşları toptan ve perakende satar, Türkiye\'nin her yerine gönderir. Sitede ' + cols.length + ' kartela ve ' + total + ' kumaş kodu yer alır. Fiyatlar sitede yazmaz, kumaş koduyla WhatsApp ya da telefondan sorulur.\n\n' +
+      '- Web: ' + BASE + '/\n- Telefon ve WhatsApp: +90 534 565 89 99\n- Instagram: https://www.instagram.com/fatihhantekstil/\n- Dil: Türkçe\n\n## Sayfalar\n\n- [Ana sayfa](' + BASE + '/)\n- [Bütün kartelalar ve kumaş kodları](' + BASE + '/kartela.html)\n\n## Kartelalar\n\n' +
+      cols.map(function (c) {
+        return '- [' + c.name + '](' + BASE + '/' + c.url + '): ' + c.n + ' renk ve desen. ' + c.series.map(function (s) { return s.name + ' serisi kodları: ' + s.items.map(function (i) { return i.code; }).join(', '); }).join('. ') + '.';
+      }).join('\n') + '\n\n## Sık sorulanlar\n\n' + faq.map(function (q) { return '### ' + q[0] + '\n' + q[1]; }).join('\n\n') + '\n'
+  });
+  out.push({ path: 'favicon.svg', content: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect width="64" height="64" fill="#000"/><text x="32" y="45" text-anchor="middle" font-family="Georgia,Times New Roman,serif" font-size="40" fill="#fff">F</text></svg>\n' });
+
+  out.push({ path: 'site.css', content: CSS });
+  return { files: out, cols: cols, total: total };
+}
+
+var CSS = ':root{--siyah:#000;--beyaz:#fff;--gri:#6b6b6b;--cizgi:#e4e4e4;--ust:60px;--yazi:"Urbanist","Helvetica Neue",Arial,sans-serif;--logo:"Bodoni Moda","Didot","Times New Roman",serif}\n' +
+  '*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:calc(var(--ust) + 16px)}body{margin:0;font-family:var(--yazi);font-weight:400;color:var(--siyah);background:var(--beyaz);-webkit-font-smoothing:antialiased}\n' +
+  'a{color:inherit;text-decoration:none}a:focus-visible,input:focus-visible{outline:2px solid currentColor;outline-offset:3px}h1,h2,h3,p,ul,figure{margin:0}ul{padding:0;list-style:none}img{display:block;max-width:100%}[hidden]{display:none!important}\n' +
+  '.duyuru{background:var(--siyah);color:var(--beyaz);text-align:center;font-size:12px;line-height:1.3;padding:9px 16px}\n' +
+  '.ust{position:sticky;top:0;z-index:10;height:var(--ust);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:0 20px;background:var(--beyaz);color:var(--siyah);border-bottom:1px solid var(--cizgi);transition:background-color .2s,color .2s}\n' +
+  '.ana .ust{margin-bottom:calc(var(--ust) * -1);background:transparent;color:var(--beyaz);border-bottom-color:transparent}.ana .ust.dolu{background:var(--beyaz);color:var(--siyah);border-bottom-color:var(--cizgi)}\n' +
+  '.menu{display:flex;gap:22px;font-size:14px}.menu a:hover,.tel:hover,.wa:hover,.alt a:hover,.iz a:hover{text-decoration:underline;text-underline-offset:5px}\n' +
+  '.marka{font-family:var(--logo);font-weight:500;font-size:25px;letter-spacing:.13em;line-height:1;text-align:center;white-space:nowrap}.marka span{display:block;font-family:var(--yazi);font-weight:400;font-size:10px;letter-spacing:.42em;margin-top:5px;padding-left:.42em}\n' +
+  '.araclar{display:flex;justify-content:flex-end;align-items:center;gap:18px;font-size:14px}\n' +
+  '.tam,.kutu{position:relative;overflow:hidden;color:var(--beyaz);background:#222}.tam,.ikili .kutu,.yarim .kutu,.tek .kutu{min-height:100vh;min-height:100svh}.ikili,.yarim{display:grid;grid-template-columns:1fr 1fr}\n' +
+  '.gorsel{position:absolute;inset:0}.gorsel img{width:100%;height:100%;object-fit:cover}\n' +
+  '.tam::after,.ikili .kutu::after,.tek .kutu::after{content:"";position:absolute;inset:40% 0 0 0;background:linear-gradient(to top,rgba(0,0,0,.62),transparent);pointer-events:none}.acilis::before{content:"";position:absolute;inset:0 0 70% 0;z-index:1;background:linear-gradient(to bottom,rgba(0,0,0,.5),transparent);pointer-events:none}\n' +
+  '.yazi{position:absolute;z-index:1;left:20px;right:20px;bottom:26px}.ust-not{font-size:14px;margin-bottom:8px}h1,h2{font-weight:300;line-height:1.08;letter-spacing:-.01em}\n' +
+  '.acilis h1{font-size:clamp(32px,4.6vw,62px);max-width:17ch}.yazi h2{font-size:clamp(30px,3.6vw,48px)}\n' +
+  '.baglar{display:flex;flex-wrap:wrap;gap:8px 26px;margin-top:16px;font-size:15px}.baglar a{position:relative;padding-left:14px}.baglar a::before{content:"";position:absolute;left:0;top:.42em;border-left:6px solid currentColor;border-top:4px solid transparent;border-bottom:4px solid transparent}.baglar a:hover{text-decoration:underline;text-underline-offset:5px}\n' +
+  '.beyaz{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:80px 24px;min-height:100vh;min-height:100svh}.ornek{width:min(320px,66%);margin-bottom:48px}.ornek img{width:100%;height:auto}.beyaz h2{font-size:clamp(30px,3vw,44px)}.beyaz .baglar{justify-content:center}\n' +
+  '.liste,.ic{max-width:1400px;margin:0 auto;padding:90px 20px 40px}.ic{padding-top:28px}.liste>h2,.ic>h1{font-size:clamp(30px,3.4vw,46px)}.giris{font-size:17px;line-height:1.55;max-width:62ch;margin:16px 0 34px}\n' +
+  '.kartlar{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:34px 16px}.kart{display:block}.kart img{width:100%;height:auto;aspect-ratio:4/3;object-fit:cover;background:#eee}.kart-ad{display:block;margin-top:11px;font-size:17px}.kart-say{display:block;margin-top:3px;font-size:13px;color:var(--gri)}.kart:hover .kart-ad{text-decoration:underline;text-underline-offset:5px}\n' +
+  '.iz{display:flex;flex-wrap:wrap;gap:6px 0;font-size:13px;color:var(--gri);margin-bottom:26px}.iz a::after{content:"/";margin:0 9px}.iz span{color:var(--siyah)}\n' +
+  '.ara{display:block;max-width:440px;margin-bottom:34px}.ara span{display:block;font-size:13px;margin-bottom:7px}.ara input{width:100%;font:inherit;font-size:16px;padding:12px 2px;border:0;border-bottom:1px solid var(--siyah);border-radius:0;background:transparent}.yok{margin-bottom:30px}\n' +
+  '.kapak img{width:100%;height:auto;aspect-ratio:21/9;object-fit:cover;background:#eee}.seri{margin-top:64px}.seri h2{font-size:28px;display:flex;align-items:baseline;gap:14px;margin-bottom:20px}.seri small{font-size:13px;font-weight:400;letter-spacing:0;color:var(--gri)}\n' +
+  '.kumaslar{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:30px 14px}.kumaslar img{width:100%;height:auto;background:#eee}figcaption{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-top:9px;font-size:14px}figcaption strong{font-weight:500;font-size:15px}figcaption a{color:var(--gri);white-space:nowrap}figcaption a:hover{color:var(--siyah);text-decoration:underline;text-underline-offset:4px}figure:target img{outline:3px solid var(--siyah);outline-offset:3px}\n' +
+  '.sss h3{font-size:19px;font-weight:500;margin:26px 0 8px}.sss p{font-size:17px}.sss p+p{margin-top:0}\n' +
+  '.kumas{display:grid;grid-template-columns:minmax(0,640px) minmax(0,1fr);gap:44px;align-items:start}.kumas-gorsel img{width:100%;height:auto;background:#eee}.kumas-bilgi h1{font-size:clamp(28px,3vw,42px);margin-bottom:18px}.kumas-bilgi p{font-size:17px;line-height:1.55;max-width:46ch}.kumas-bilgi dl{display:grid;grid-template-columns:auto 1fr;gap:9px 22px;margin:26px 0;font-size:15px}.kumas-bilgi dt{color:var(--gri)}.kumas-bilgi dd{margin:0}.kumas-bilgi dd a{text-decoration:underline;text-underline-offset:4px}.kumas-bilgi .baglar{font-size:16px}.kumaslar.kucuk{grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:20px 10px}.kumaslar a{display:block}figcaption strong a:hover{text-decoration:underline;text-underline-offset:4px}\n' +
+  '.kodlar{margin-top:90px;border-top:1px solid var(--cizgi);padding-top:50px}.kodlar>h2{font-size:28px;margin-bottom:30px}.kod-grup{margin-bottom:26px}.kod-grup h3{font-size:16px;font-weight:500;margin-bottom:8px}.kod-grup ul{display:flex;flex-wrap:wrap;gap:6px 16px;font-size:13px;color:var(--gri)}.kod-grup a:hover{color:var(--siyah);text-decoration:underline}\n' +
+  '.gecis{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:90px;padding-top:22px;border-top:1px solid var(--cizgi);font-size:15px}.gecis a:hover{text-decoration:underline;text-underline-offset:5px}\n' +
+  '.metin,.iletisim{max-width:660px;margin:0 auto;padding:90px 24px 40px}.metin h2,.iletisim h2{font-size:clamp(28px,3vw,40px);margin-bottom:26px}.metin p{font-size:18px;line-height:1.6}.metin p+p{margin-top:18px}.iletisim{padding-bottom:120px}\n' +
+  '.buyuk{display:inline-block;font-weight:300;font-size:clamp(40px,7vw,84px);line-height:1;letter-spacing:-.02em}.buyuk:hover{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:10px}.iletisim .baglar{margin-top:30px;font-size:16px}\n' +
+  '.alt{display:flex;justify-content:space-between;gap:10px 24px;flex-wrap:wrap;margin-top:60px;padding:20px;border-top:1px solid var(--cizgi);font-size:13px;color:var(--gri)}\n' +
+  '@media (max-width:760px){.ust{padding:0 14px}.menu{gap:14px;font-size:13px}.menu a:nth-child(n+2),.tel{display:none}.marka{font-size:20px}.marka span{font-size:9px}.ikili,.yarim{grid-template-columns:1fr}.ikili .kutu,.yarim .kutu,.tek .kutu{min-height:78svh}.beyaz{min-height:0;padding:70px 24px}.yazi{left:16px;right:16px;bottom:22px}.liste,.ic{padding-left:14px;padding-right:14px}.kartlar{grid-template-columns:1fr 1fr;gap:26px 10px}.kumaslar{grid-template-columns:1fr 1fr;gap:22px 10px}.kumas{grid-template-columns:1fr;gap:26px}.kumaslar.kucuk{grid-template-columns:1fr 1fr 1fr}figcaption{flex-direction:column;gap:3px}.metin p{font-size:17px}}\n' +
+  '@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.ust{transition:none}}\n';
+
+if (typeof module !== 'undefined') module.exports = { build: build };
